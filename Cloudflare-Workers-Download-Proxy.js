@@ -1,24 +1,51 @@
 addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request))
+  const { pathname } = new URL(event.request.url)
+  
+  if (pathname === '/') {
+    event.respondWith(handlePageRequest(event.request))
+  } else if (pathname === '/download') {
+    event.respondWith(handleDownloadRequest(event.request))
+  } else {
+    event.respondWith(new Response('Not Found', { status: 404 }))
+  }
 })
 
-async function handleRequest(request) {
+async function handlePageRequest(request) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>文件下载</title>
+      </head>
+      <body>
+        <h1>文件下载</h1>
+        <form action="/download" method="get">
+          <label for="url">下载链接：</label>
+          <input type="text" id="url" name="url" required>
+          <button type="submit">下载</button>
+        </form>
+      </body>
+    </html>
+  `
+  
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  })
+}
+
+async function handleDownloadRequest(request) {
   const url = new URL(request.url)
   const downloadUrl = url.searchParams.get('url')
   
-  // 检查是否提供了文件下载链接
   if (!downloadUrl) {
-    return new Response('请提供文件下载链接。', {status: 400})
+    return new Response('请提供文件下载链接。', { status: 400 })
   }
   
-  // 使用fetch API下载文件
   const response = await fetch(downloadUrl)
-  
-  // 将响应头中的Content-Disposition字段替换为inline
   const modifiedHeaders = new Headers(response.headers)
   modifiedHeaders.set('Content-Disposition', 'inline')
   
-  // 返回响应
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
